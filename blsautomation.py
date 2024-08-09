@@ -177,14 +177,14 @@ def close_post_login_popup(driver):
 def book_appointment(driver):
     try:
         # Wait for the "Book Appointment" button to be clickable and click it
-        book_button = WebDriverWait(driver, 10).until(
+        book_button = WebDriverWait(driver, 3).until(
             EC.element_to_be_clickable((By.LINK_TEXT, "Book Appointment"))
         )
         book_button.click()
         print("Clicked on 'Book Appointment'.")
 
         # Wait for the location dropdown to be present and select Islamabad
-        location_select = WebDriverWait(driver, 10).until(
+        location_select = WebDriverWait(driver, 3).until(
             EC.presence_of_element_located((By.ID, "valCenterLocationId"))
         )
         select = Select(location_select)
@@ -192,7 +192,7 @@ def book_appointment(driver):
         print("Selected Islamabad location.")
 
         # Wait for the visa type dropdown to be present and select Study Visa
-        visa_select = WebDriverWait(driver, 10).until(
+        visa_select = WebDriverWait(driver, 3).until(
             EC.presence_of_element_located((By.ID, "valCenterLocationTypeId"))
         )
         select = Select(visa_select)
@@ -200,7 +200,7 @@ def book_appointment(driver):
         print("Selected Study Visa.")
 
         # Wait for the page to update and ensure the application type dropdown is present
-        app_type_dropdown = WebDriverWait(driver, 10).until(
+        app_type_dropdown = WebDriverWait(driver, 3).until(
             EC.presence_of_element_located((By.ID, "valAppointmentForMembers"))
         )
 
@@ -232,28 +232,25 @@ def book_appointment(driver):
     except Exception as e:
         print("Error during booking steps:", e)
 
-from selenium.common.exceptions import NoSuchElementException, TimeoutException
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.by import By
 
 def monitor_appointment_slots(driver):
     try:
         print("Starting to monitor appointment slots...")
-        # Wait for the date picker to load
-        date_picker = WebDriverWait(driver, 20).until(
-            EC.presence_of_element_located((By.CLASS_NAME, "datepicker-days"))
-        )
         
         while True:
             try:
                 # Refresh the page
                 driver.refresh()
+                wait_for_page_load(driver)  # Wait for page to load fully
                 print("Page refreshed. Checking for available slots...")
-                time.sleep(5)  # Allow the page to load fully
-
-                # Re-locate the date picker after refresh
-                date_picker = WebDriverWait(driver, 20).until(
+                
+                # Wait for the date picker to load
+                date_picker = WebDriverWait(driver, 30).until(
                     EC.presence_of_element_located((By.CLASS_NAME, "datepicker-days"))
                 )
-
+                
                 # Get all available day elements
                 available_days = date_picker.find_elements(By.CLASS_NAME, "day")
                 print(f"Found {len(available_days)} days in the date picker.")
@@ -285,6 +282,10 @@ def monitor_appointment_slots(driver):
     except Exception as e:
         print(f"Error monitoring appointment slots: {e}")
 
+def wait_for_page_load(driver):
+    WebDriverWait(driver, 30).until(
+        EC.presence_of_element_located((By.TAG_NAME, "body"))
+    )
 
 
 def main():
