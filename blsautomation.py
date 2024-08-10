@@ -188,8 +188,8 @@ def book_appointment(driver):
             EC.presence_of_element_located((By.ID, "valCenterLocationId"))
         )
         select = Select(location_select)
-        select.select_by_visible_text("Islamabad (Pakistan)")
-        print("Selected Islamabad location.")
+        select.select_by_visible_text("Quetta (Pakistan)")
+        print("Selected Quetta location.")
 
         # Wait for the visa type dropdown to be present and select Study Visa
         visa_select = WebDriverWait(driver, 3).until(
