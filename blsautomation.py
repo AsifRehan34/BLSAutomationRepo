@@ -231,44 +231,66 @@ def book_appointment(driver):
 
     except Exception as e:
         print("Error during booking steps:", e)
+def click_date_dropdown(driver):
+    try:
+        # Find and click the date dropdown
+        date_dropdown = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.ID, "valAppointmentDate"))
+        )
+        date_dropdown.click()
+        print("Date dropdown clicked.")
+    except TimeoutException:
+        print("Timeout while waiting for the date dropdown to be clickable.")
+    except NoSuchElementException:
+        print("Date dropdown not found.")
+    except Exception as e:
+        print(f"Error clicking the date dropdown: {e}")
+
+def click_date_dropdown(driver):
+    try:
+        # Find and click the date dropdown
+        date_dropdown = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.ID, "valAppointmentDate"))
+        )
+        date_dropdown.click()
+        print("Date dropdown clicked.")
+    except TimeoutException:
+        print("Timeout while waiting for the date dropdown to be clickable.")
+    except NoSuchElementException:
+        print("Date dropdown not found.")
+    except Exception as e:
+        print(f"Error clicking the date dropdown: {e}")
+
 def monitor_and_book_slot(driver):
     try:
-        print("Starting to monitor appointment slots...")
+        print("Starting to monitor available slots...")
 
         while True:
             try:
-                # Simulate a click on the date picker to ensure it updates
-                date_picker_toggle = driver.find_element(By.CLASS_NAME, "datepicker-switch")
-                driver.execute_script("arguments[0].click();", date_picker_toggle)
-                print("Date picker clicked to update available slots.")
-
-                # Wait for the date picker to load the available days
-                date_picker = WebDriverWait(driver, 10).until(
-                    EC.presence_of_element_located((By.CLASS_NAME, "datepicker-days"))
+                # Find all the days with available slots
+                available_slots = WebDriverWait(driver, 10).until(
+                    EC.presence_of_all_elements_located((By.XPATH, "//td[contains(@class, 'day') and contains(@class, 'label-available')]"))
                 )
 
-                available_days = date_picker.find_elements(By.CLASS_NAME, "day")
-                print(f"Found {len(available_days)} days in the date picker.")
-                
-                slot_found = False
-                for day in available_days:
-                    if "disabled" not in day.get_attribute("class"):
-                        day.click()  # Click the available slot
-                        print("Appointment slot selected. Waiting for appointment type...")
-                        slot_found = True
-                        break
-                
-                if slot_found:
-                    # Proceed to select appointment type
-                    select_appointment_type(driver)
+                if available_slots:
+                    # Click the first available slot
+                    available_slots[0].click()
+                    print("Available slot selected. Checking for appointment type dropdown.")
+                    
+                    # Check if the appointment type dropdown appears
+                    if select_appointment_type(driver):
+                        print("Appointment type selected.")
+                    else:
+                        print("Appointment type not available. Skipping this step.")
+                    
                     break
                 else:
-                    print("No appointment slots available. Still monitoring...")
+                    print("No available slots. Still monitoring...")
 
             except TimeoutException:
-                print("Timeout occurred while waiting for page elements. Retrying...")
+                print("Timeout occurred while waiting for available slots. Retrying...")
             except NoSuchElementException:
-                print("Element not found during monitoring. Retrying...")
+                print("No available slots found. Retrying...")
             except Exception as e:
                 print(f"Unexpected error during slot monitoring: {e}")
 
@@ -276,11 +298,11 @@ def monitor_and_book_slot(driver):
             time.sleep(1)  # Check every second
 
     except Exception as e:
-        print(f"Error monitoring appointment slots: {e}")
+        print(f"Error monitoring and booking slots: {e}")
 
 def select_appointment_type(driver):
     try:
-        # Wait for the appointment type dropdown to appear
+        # Wait for the appointment type dropdown to appear within a reasonable time
         app_type_dropdown = WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.ID, "appointmentType"))
         )
@@ -290,30 +312,18 @@ def select_appointment_type(driver):
         select = Select(app_type_dropdown)
         select.select_by_visible_text("Normal Time")
         print("Selected 'Normal Time' as appointment type.")
-
-        # Wait for navigation to payment page
-        wait_for_payment_page(driver)
+        
+        return True  # Indicate that the appointment type was successfully selected
 
     except TimeoutException:
-        print("Timeout while waiting for appointment type dropdown.")
+        print("Appointment type dropdown not found. It may not be available on this page.")
+        return False  # Indicate that the appointment type was not available
     except NoSuchElementException:
-        print("Appointment type dropdown not found.")
+        print("Appointment type dropdown element not found.")
+        return False  # Indicate that the appointment type was not available
     except Exception as e:
         print(f"Error selecting appointment type: {e}")
-
-def wait_for_payment_page(driver):
-    try:
-        # Wait for an element that indicates the payment page has loaded
-        WebDriverWait(driver, 30).until(
-            EC.presence_of_element_located((By.ID, "payment-section-id"))  # Replace with the actual locator for payment page
-        )
-        print("Successfully navigated to the payment page.")
-    except TimeoutException:
-        print("Timeout while waiting for the payment page to load.")
-    except NoSuchElementException:
-        print("Element indicating payment page not found.")
-    except Exception as e:
-        print(f"Error waiting for the payment page: {e}")
+        return False  # Indicate that the appointment type was not available
 
 # Start monitoring and booking
 def main():
@@ -326,9 +336,15 @@ def main():
         if login(driver, "walees.wahab321@gmail.com", "Italianuni#123"):
             close_post_login_popup(driver)
             book_appointment(driver)
+            click_date_dropdown(driver)  # Click the date dropdown first
             monitor_and_book_slot(driver)  # Start monitoring and booking slots
     finally:
-        driver.quit()
+        # Keep the browser open for manual work
+        print("Browser is open for manual work. Close it when done.")
+        input("Press Enter to close the browser...")  # Wait for user input
+        # driver.quit()  # Ensure this line is commented out to keep the browser open
+        
 
 if __name__ == "__main__":
     main()
+
