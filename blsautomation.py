@@ -95,7 +95,6 @@ def solve_captcha_with_2captcha(encoded_image):
         print("Error solving captcha with 2Captcha:", e)
         return None
 
-
 def login(driver, email, password, max_attempts=3):
     attempt = 0
     while attempt < max_attempts:
