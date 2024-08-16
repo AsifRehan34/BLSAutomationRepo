@@ -8,6 +8,7 @@ import time
 import requests
 import io
 import base64
+import sys
 
 # 2Captcha API Key
 API_KEY = '878a2aa4e68c0415e7a5ae50730dfdd3'
@@ -94,6 +95,7 @@ def solve_captcha_with_2captcha(encoded_image):
         print("Error solving captcha with 2Captcha:", e)
         return None
 
+
 def login(driver, email, password, max_attempts=3):
     attempt = 0
     while attempt < max_attempts:
@@ -129,11 +131,15 @@ def login(driver, email, password, max_attempts=3):
 
                     # Check for login success or failure
                     time.sleep(5)  # Wait to ensure login attempt is processed
+
+                    # Verify if login was successful by checking for the presence of a logout button or any other element that appears after a successful login
                     if "login failed" not in driver.page_source.lower():
                         print("Login successful.")
                         return True
                     else:
-                        print("Login failed due to incorrect captcha.")
+                        print("Login failed due to incorrect captcha or credentials.")
+                        raise Exception("Login failed. Stopping script.")  # Stop the script if login fails
+
                 else:
                     print("Failed to get captcha text.")
             else:
@@ -143,7 +149,7 @@ def login(driver, email, password, max_attempts=3):
             print("Error during login attempt:", e)
 
     print("Max login attempts reached. Login failed.")
-    return False
+    sys.exit("Login failed. Exiting script.")  # Exit the script if all attempts fail
 
 def check_balance():
     try:
@@ -231,20 +237,6 @@ def book_appointment(driver):
 
     except Exception as e:
         print("Error during booking steps:", e)
-def click_date_dropdown(driver):
-    try:
-        # Find and click the date dropdown
-        date_dropdown = WebDriverWait(driver, 10).until(
-            EC.element_to_be_clickable((By.ID, "valAppointmentDate"))
-        )
-        date_dropdown.click()
-        print("Date dropdown clicked.")
-    except TimeoutException:
-        print("Timeout while waiting for the date dropdown to be clickable.")
-    except NoSuchElementException:
-        print("Date dropdown not found.")
-    except Exception as e:
-        print(f"Error clicking the date dropdown: {e}")
 
 def click_date_dropdown(driver):
     try:
@@ -260,6 +252,7 @@ def click_date_dropdown(driver):
         print("Date dropdown not found.")
     except Exception as e:
         print(f"Error clicking the date dropdown: {e}")
+
 
 def monitor_and_book_slot(driver):
     try:
@@ -304,13 +297,13 @@ def select_appointment_type(driver):
     try:
         # Wait for the appointment type dropdown to appear within a reasonable time
         app_type_dropdown = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.ID, "appointmentType"))
+            EC.presence_of_element_located((By.ID, "valAppointmentType"))
         )
         print("Appointment type dropdown found.")
 
         # Select "Normal Time"
         select = Select(app_type_dropdown)
-        select.select_by_visible_text("Normal Time")
+        select.select_by_value("normal")
         print("Selected 'Normal Time' as appointment type.")
         
         return True  # Indicate that the appointment type was successfully selected
@@ -324,6 +317,40 @@ def select_appointment_type(driver):
     except Exception as e:
         print(f"Error selecting appointment type: {e}")
         return False  # Indicate that the appointment type was not available
+def fill_details_and_proceed_to_payment(driver):
+    try:
+        # Wait for the first name field to be present
+        first_name_field = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.NAME, "valApplicant[1][first_name]"))
+        )
+        first_name_field.clear()
+        first_name_field.send_keys("Waleed")
+        print("First name entered.")
+
+        # Wait for the last name field to be present
+        last_name_field = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.NAME, "valApplicant[1][last_name]"))
+        )
+        last_name_field.clear()
+        last_name_field.send_keys("Wahab")
+        print("Last name entered.")
+
+        # Check the condition box
+        agree_checkbox = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.ID, "agree"))
+        )
+        if not agree_checkbox.is_selected():
+            agree_checkbox.click()
+        print("Condition box checked.")
+
+        # # Proceed to the payment page
+        # proceed_button = driver.find_element(By.XPATH, "//button[contains(text(), 'Proceed to Payment')]")
+        # proceed_button.click()
+        # print("Proceeding to the payment page...")
+
+    except Exception as e:
+        print(f"Error filling details or proceeding to payment: {str(e)}")
+
 
 # Start monitoring and booking
 def main():
@@ -338,6 +365,7 @@ def main():
             book_appointment(driver)
             click_date_dropdown(driver)  # Click the date dropdown first
             monitor_and_book_slot(driver)  # Start monitoring and booking slots
+            fill_details_and_proceed_to_payment(driver)
     finally:
         # Keep the browser open for manual work
         print("Browser is open for manual work. Close it when done.")
