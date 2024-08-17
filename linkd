@@ -61,7 +61,7 @@ appointment type =<select name="valAppointmentType" class="form-control boxed" i
 first name: <input type="text" name="valApplicant[1][first_name]" class="form-control" placeholder="Enter First Name" required="" aria-required="true">
 last name: <input type="text" name="valApplicant[1][last_name]" class="form-control" placeholder="Enter Last Name" required="" aria-required="true">
 input check box:<input type="checkbox" name="agree" id="agree" value="1" required="" aria-required="true" aria-describedby="agree-error">
-
+<button type="submit" name="action" value="valBookNow" id="valBookNow" class="btn btn-success">Book Now</button>
 payment:
 
 card number: <input type="text" class="validate ng-pristine ng-untouched ng-invalid ng-invalid-required ng-valid-maxlength" ng-model="Card_number" id="cardNumber" name="creditCardNumber" maxlength="23" ng-keyup="ValidateCardNumber($event,this)" autocomplete="off" data-ng-keypress="onEnterKeyPress($event)" inputmode="numeric" onkeypress="return formats(this,event)" ng-blur="pasteformats(this,event)" oninput="javascript: if (this.value.length > this.maxLength) this.value = this.value.slice(0, this.maxLength);" required="">

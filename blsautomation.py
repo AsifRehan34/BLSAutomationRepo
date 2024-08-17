@@ -102,42 +102,55 @@ def login(driver, email, password, max_attempts=3):
             attempt += 1
             print(f"Login attempt {attempt} of {max_attempts}.")
 
+            # Input email
             email_input = WebDriverWait(driver, 10).until(
                 EC.visibility_of_element_located((By.XPATH, "//input[@placeholder='Enter Email']"))
             )
             email_input.clear()
             email_input.send_keys(email)
 
+            # Input password
             password_input = WebDriverWait(driver, 10).until(
                 EC.visibility_of_element_located((By.XPATH, "//input[@placeholder='Enter Password']"))
             )
             password_input.clear()
             password_input.send_keys(password)
 
+            # Get and solve captcha
             captcha_base64 = get_captcha_image_base64(driver)
-
             if captcha_base64:
                 captcha_text = solve_captcha_with_2captcha(captcha_base64)
-
                 if captcha_text:
                     captcha_input = driver.find_element(By.ID, "captcha_code_reg")
                     captcha_input.clear()
                     captcha_input.send_keys(captcha_text)
 
+                    # Click login
                     submit_button = driver.find_element(By.NAME, "submitLogin")
                     submit_button.click()
                     print("Login submitted.")
 
-                    # Check for login success or failure
+                    # Wait for the page to load and check for error message or logout button
                     time.sleep(5)  # Wait to ensure login attempt is processed
 
-                    # Verify if login was successful by checking for the presence of a logout button or any other element that appears after a successful login
-                    if "login failed" not in driver.page_source.lower():
+                    # Check if the error message is displayed
+                    error_message = None
+                    try:
+                        error_message = driver.find_element(By.XPATH, "//div[contains(@class, 'error-message')]").text
+                    except NoSuchElementException:
+                        pass
+
+                    if error_message:
+                        print(f"Login failed due to error: {error_message}. Retrying...")
+                        continue  # Retry login
+
+                    # Check if login was successful by looking for a specific element that indicates login success
+                    if "logout" in driver.page_source.lower() or "dashboard" in driver.page_source.lower():
                         print("Login successful.")
                         return True
                     else:
-                        print("Login failed due to incorrect captcha or credentials.")
-                        raise Exception("Login failed. Stopping script.")  # Stop the script if login fails
+                        print("Login failed. Error message not found, but no successful login detected.")
+                        continue  # Retry login
 
                 else:
                     print("Failed to get captcha text.")
@@ -145,10 +158,10 @@ def login(driver, email, password, max_attempts=3):
                 print("Failed to get captcha image.")
         
         except Exception as e:
-            print("Error during login attempt:", e)
+            print(f"Error during login attempt {attempt}: {e}")
 
     print("Max login attempts reached. Login failed.")
-    sys.exit("Login failed. Exiting script.")  # Exit the script if all attempts fail
+    return False
 
 def check_balance():
     try:
@@ -269,15 +282,22 @@ def monitor_and_book_slot(driver):
                     available_slots[0].click()
                     print("Available slot selected. Checking for appointment type dropdown.")
                     
-                    # Check if the appointment type dropdown appears
-                    if select_appointment_type(driver):
-                        print("Appointment type selected.")
-                    else:
-                        print("Appointment type not available. Skipping this step.")
+                    # Wait and retry mechanism for appointment type dropdown
+                    appointment_type_selected = False
+                    retries = 3
+                    for _ in range(retries):
+                        if select_appointment_type(driver):
+                            appointment_type_selected = True
+                            break
+                        else:
+                            print("Appointment type not available yet. Retrying...")
+                            time.sleep(3)  # Wait before retrying
                     
-                    break
-                else:
-                    print("No available slots. Still monitoring...")
+                    if appointment_type_selected:
+                        print("Appointment type selected successfully.")
+                        break  # Exit the loop if the appointment type is selected
+                    else:
+                        print("Failed to select appointment type after multiple attempts. Retrying...")
 
             except TimeoutException:
                 print("Timeout occurred while waiting for available slots. Retrying...")
@@ -287,7 +307,7 @@ def monitor_and_book_slot(driver):
                 print(f"Unexpected error during slot monitoring: {e}")
 
             # Sleep before trying again
-            time.sleep(1)  # Check every second
+            time.sleep(5)  # Check every 5 seconds
 
     except Exception as e:
         print(f"Error monitoring and booking slots: {e}")
@@ -316,6 +336,7 @@ def select_appointment_type(driver):
     except Exception as e:
         print(f"Error selecting appointment type: {e}")
         return False  # Indicate that the appointment type was not available
+
 def fill_details_and_proceed_to_payment(driver):
     try:
         # Wait for the first name field to be present
@@ -342,10 +363,10 @@ def fill_details_and_proceed_to_payment(driver):
             agree_checkbox.click()
         print("Condition box checked.")
 
-        # # Proceed to the payment page
-        # proceed_button = driver.find_element(By.XPATH, "//button[contains(text(), 'Proceed to Payment')]")
-        # proceed_button.click()
-        # print("Proceeding to the payment page...")
+        # Proceed to the payment page
+        proceed_button = driver.find_element(By.ID, "valBookNow")
+        proceed_button.click()
+        print("Proceeding to the payment page...")
 
     except Exception as e:
         print(f"Error filling details or proceeding to payment: {str(e)}")
@@ -364,6 +385,7 @@ def main():
             book_appointment(driver)
             click_date_dropdown(driver)  # Click the date dropdown first
             monitor_and_book_slot(driver)  # Start monitoring and booking slots
+            # select_appointment_type(driver,10)
             fill_details_and_proceed_to_payment(driver)
     finally:
         # Keep the browser open for manual work
